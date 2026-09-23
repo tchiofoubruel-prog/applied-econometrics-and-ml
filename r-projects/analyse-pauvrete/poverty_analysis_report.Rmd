@@ -30,7 +30,7 @@ tab
 ```
 
 
-```{r definition of dataframes }
+```{r definition-of-dataframes}
 # Case of Benin
 datw = ehcvm_welfare_ben2018
 dati = ehcvm_individu_ben2018
@@ -42,12 +42,12 @@ View(datbn)
 
 ## construction of functions 
 
-```{r definition of poverty line}
+```{r definition-of-poverty-line}
 lpa = function(datbn){ datbn$zref[1] }
 ```
 
 
-```{r Creation of Foster indices}
+```{r Creation-of-Foster-indices}
 
 FGT = function(datbn,z,a) {
   
@@ -60,7 +60,7 @@ FGT = function(datbn,z,a) {
 }
 ```
 
-```{r Creation of Watts indices }
+```{r Creation-of-Watts-indices}
 
 Watts = function(datbn,z) {
   
@@ -73,7 +73,7 @@ Watts = function(datbn,z) {
 }
 ```
 
-```{r Creation of Chakravarty indices}
+```{r Creation-of-Chakravarty-indices}
 
 Chakravarty = function(datbn,z,u) {
   
@@ -88,7 +88,7 @@ Chakravarty = function(datbn,z,u) {
 
 ##Calculating Benin indices 
 
-```{r National level}
+```{r National-level}
 
 # Definition of a matrix to store the data
 mat = matrix(0, ncol = 5, nrow = 1)
@@ -104,7 +104,7 @@ names(ben_nat) <- c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
           
 ```
 
-```{r At the life level }
+```{r At-the-life-level}
 
   # Create a list of unique values of the specified attribute
 milieu_vals = sort(unique(datbn[["milieu"]]))
@@ -131,7 +131,7 @@ names(ben_mil) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r  regions level}
+```{r regions-level}
 
 reg_vals = sort(unique(datbn[["region"]]))
 mat_reg = matrix(0,ncol =5,nrow=length(reg_vals))
@@ -153,7 +153,7 @@ names(ben_reg) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r sex level }
+```{r sex-level}
 
 sex_vals = sort(unique(datbn[["hgender"]]))
 mat_sex = matrix(0,ncol =5,nrow=length(sex_vals))
@@ -175,7 +175,7 @@ names(ben_sex) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r At the household level }
+```{r At-the-household-level}
 
 men_vals = sort(unique(datbn[["hhsize"]]))
 mat_men = matrix(0,ncol =5,nrow=length(men_vals))
@@ -197,7 +197,7 @@ names(ben_men) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r education level }
+```{r education-level}
 
 educ_vals = sort(unique(datbn[["heduc"]]))
 mat_educ = matrix(0,ncol =5,nrow=length(educ_vals))
@@ -219,7 +219,7 @@ names(ben_educ) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r sector of activity level of  CM}
+```{r sector-of-activity-level-of-CM}
 
 bra_vals = sort(unique(datbn[["hbranch"]]))
 mat_bra = matrix(0,ncol =5,nrow=length(bra_vals))
@@ -241,7 +241,7 @@ names(ben_bra) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r age level of CM}
+```{r age-level-of-CM}
 
 age_vals = sort(unique(datbn[["hage"]]))
 mat_age = matrix(0,ncol =5,nrow=length(age_vals))
@@ -267,7 +267,7 @@ names(ben_age) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 # Burkina Faso 
 
-```{r importing dataset}
+```{r importing-dataset}
 library(haven)
 ehcvm_individu_bfa2018 <- read_sav("BURKINA /ehcvm_individu_bfa2018.sav")
 View(ehcvm_individu_bfa2018)
@@ -278,7 +278,7 @@ View(ehcvm_welfare_bfa2018)
 
 ```
 
-```{r definition of dataframe }
+```{r definition-of-dataframe}
 
 datwbfa = ehcvm_welfare_bfa2018
 datibfa  = ehcvm_individu_bfa2018
@@ -288,7 +288,7 @@ datbfa = merge(datibfa,datwbfa[,c("hhid","zref","pcexp","hhsize","heduc","hdiplo
 ```
 ## defining functions for burkina 
 
-```{r  Foster indices}
+```{r Foster-indices}
 FGT_bfa = function(datbfa,z,a) {
   
   y=datbfa$pcexp
@@ -332,7 +332,7 @@ Chakravarty_bfa = function(datbfa,z,u)
 
 ## calculing  indices 
 
-```{r national level-2}
+```{r national-level-2}
 
 
 matbfa = matrix(0,ncol=5,nrow=1)
@@ -347,7 +347,7 @@ names(bfa_nat) <- c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r life level}
+```{r life-level}
 
 milieubfa_vals = sort(unique(datbfa[["milieu"]]))
 mat_milbfa= matrix(0, ncol = 5, nrow = length(milieubfa_vals))
@@ -369,7 +369,7 @@ for (i in seq_along(milieubfa_vals)) {
 
 ```
 
-```{r  region level}
+```{r region-level}
 
 regbfa_vals = sort(unique(datbfa[["region"]]))
 mat_regbfa = matrix(0,ncol =5,nrow=length(regbfa_vals))
@@ -391,7 +391,7 @@ names(bfa_reg) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r sex level-2}
+```{r sex-level-2}
 
 sexbfa_vals = sort(unique(datbfa[["hgender"]]))
 mat_sexbfa = matrix(0,ncol =5,nrow=length(sexbfa_vals))
@@ -413,7 +413,7 @@ names(bfa_sex) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r house hold level}
+```{r house-hold-level}
 
 menbfa_vals = sort(unique(datbfa[["hhsize"]]))
 mat_menbfa = matrix(0,ncol =5,nrow=length(menbfa_vals))
@@ -434,7 +434,7 @@ bfa_men = data.frame(mat_menbfa,check.names = TRUE)
 names(bfa_men) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r education level-2}
+```{r education-level-2}
 educbfa_vals = sort(unique(datbfa[["heduc"]]))
 mat_educbfa = matrix(0,ncol =5,nrow=length(educbfa_vals))
 
@@ -454,7 +454,7 @@ bfa_educ = data.frame(mat_educbfa,check.names = TRUE)
 names(bfa_educ) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r  branche of activity}
+```{r branche-of-activity}
 
 brabfa_vals = sort(unique(datbfa[["hbranch"]]))
 mat_brabfa = matrix(0,ncol =5,nrow=length(brabfa_vals))
@@ -475,7 +475,7 @@ bfa_bra= data.frame(mat_brabfa,check.names = TRUE)
 names(bfa_bra) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r age level of CM-2}
+```{r age-level-of-CM-2}
 
 agebfa_vals = sort(unique(datbfa[["hage"]]))
 matbfa_age = matrix(0,ncol =5,nrow=length(agebfa_vals))
@@ -500,7 +500,7 @@ names(bfa_age) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 # Niger 
 
 
-```{r importing dataset-2}
+```{r importing-dataset-2}
 
 ehcvm_welfare_ner2018 <- read_dta("nigr /ehcvm_welfare_ner2018.dta")
 View(ehcvm_welfare_ner2018)
@@ -510,7 +510,7 @@ View(ehcvm_individu_ner2018)
 
 ```
 
-```{r definition of dataframe-2}
+```{r definition-of-dataframe-2}
 
 datwn = ehcvm_welfare_ner2018
 datin  = ehcvm_individu_ner2018
@@ -521,12 +521,12 @@ datnig = merge(datin,datwn[,c("hhid","zref","pcexp","hhsize","heduc","hdiploma",
 
 ## definition of functions 
 
-```{r definting poverty line }
+```{r definting-poverty-line}
 
 lpan = function(datnig){ datnig$zref[1] }
 ```
 
-```{r Foster indices-2}
+```{r Foster-indices-2}
 
 FGT_n = function(datnig,z,a) {
   
@@ -568,7 +568,7 @@ Chakravarty_n = function(datnig,z,u) {
 
 ## calculating indices 
 
-```{r national level-3}
+```{r national-level-3}
 # Definition of a matrix to store the data 
 matn = matrix(0, ncol=5, nrow=1)
 
@@ -583,7 +583,7 @@ names(nig_nat) <- c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r living environment}
+```{r living-environment}
 
 # Create a list of unique values for the specified attribute
 milieun_vals = sort(unique(datnig[["milieu"]]))
@@ -611,7 +611,7 @@ names(nig_mil) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
    
 ```
 
-```{r region level-2}
+```{r region-level-2}
 
 regn_vals = sort(unique(datnig[["region"]]))
 mat_regn = matrix(0,ncol =5,nrow=length(regn_vals))
@@ -633,7 +633,7 @@ names(nig_reg) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r sex level-3}
+```{r sex-level-3}
 
 sexn_vals = sort(unique(datnig[["hgender"]]))
 mat_sexn = matrix(0,ncol =5,nrow=length(sexn_vals))
@@ -655,7 +655,7 @@ names(nig_sex) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r Household size }
+```{r Household-size}
 
 menn_vals = sort(unique(datnig[["hhsize"]]))
 mat_menn = matrix(0,ncol =5,nrow=length(menn_vals))
@@ -677,7 +677,7 @@ names(nig_men) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r education level-3}
+```{r education-level-3}
 
 educn_vals = sort(unique(datnig[["heduc"]]))
 mat_educn = matrix(0,ncol =5,nrow=length(educn_vals))
@@ -698,7 +698,7 @@ nig_educ = data.frame(mat_educn,check.names = TRUE)
 names(nig_educ) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r branche of d'activity}
+```{r branche-of-d-activity}
 
 bran_vals = sort(unique(datnig[["hbranch"]]))
 mat_bran = matrix(0,ncol =5,nrow=length(bran_vals))
@@ -719,7 +719,7 @@ nig_bra= data.frame(mat_bran,check.names = TRUE)
 names(nig_bra) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r age level}
+```{r age-level}
 
 agen_vals = sort(unique(datnig[["hage"]]))
 matn_age = matrix(0,ncol =5,nrow=length(agen_vals))
@@ -747,7 +747,7 @@ names(nig_age) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 # Togo 
 
  
-```{r importing dataset-3}
+```{r importing-dataset-3}
 
 ehcvm_welfare_tgo2018 <- read_dta("TOGO /ehcvm_welfare_tgo2018.dta")
 View(ehcvm_welfare_tgo2018)
@@ -756,7 +756,7 @@ View(ehcvm_individu_tgo2018)
 
 ```
 
-```{r creation of dataframe}
+```{r creation-of-dataframe}
 
 datwtgo = ehcvm_welfare_tgo2018
 datitgo  = ehcvm_individu_tgo2018
@@ -766,7 +766,7 @@ dattgo = merge(datitgo,datwtgo[,c("hhid","zref","pcexp","hhsize","heduc","hdiplo
 ```
 ## définition des fonctions pour le togo
 
-```{r FOSTER indices-3}
+```{r FOSTER-indices-3}
 
 FGT_tgo = function(dattgo,z,a) {
   
@@ -811,7 +811,7 @@ Chakravarty_tgo = function(dattgo,z,u)
 
 ## calculating  indices 
 
-```{r  national levell}
+```{r national-levell}
 
 mattgo = matrix(0,ncol=5,nrow=1)
 
@@ -824,7 +824,7 @@ tgo_nat = data.frame(mattgo,check.names =TRUE)
 names(tgo_nat) <- c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r life enviroment}
+```{r life-enviroment}
 
 milieutgo_vals = sort(unique(dattgo[["milieu"]]))
 mat_miltgo= matrix(0, ncol = 5, nrow = length(milieutgo_vals))
@@ -845,7 +845,7 @@ for (i in seq_along(milieutgo_vals)) {
   names(tgo_mil) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r region level-3}
+```{r region-level-3}
 
 regtgo_vals = sort(unique(dattgo[["region"]]))
 mat_regtgo = matrix(0,ncol =5,nrow=length(regtgo_vals))
@@ -866,7 +866,7 @@ tgo_reg = data.frame(mat_regtgo,check.names = TRUE)
 names(tgo_reg) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r sex level-4}
+```{r sex-level-4}
 
 sextgo_vals = sort(unique(dattgo[["hgender"]]))
 mat_sextgo = matrix(0,ncol =5,nrow=length(sextgo_vals))
@@ -888,7 +888,7 @@ names(tgo_sex) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r household level}
+```{r household-level}
 
 mentgo_vals = sort(unique(dattgo[["hhsize"]]))
 mat_mentgo = matrix(0,ncol =5,nrow=length(mentgo_vals))
@@ -909,7 +909,7 @@ tgo_men = data.frame(mat_mentgo,check.names = TRUE)
 names(tgo_men) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r education level-4}
+```{r education-level-4}
 eductgo_vals = sort(unique(dattgo[["heduc"]]))
 mat_eductgo = matrix(0,ncol =5,nrow=length(eductgo_vals))
 
@@ -929,7 +929,7 @@ tgo_educ = data.frame(mat_eductgo,check.names = TRUE)
 names(tgo_educ) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r  branche of activité}
+```{r branche-of-activite}
 
 bratgo_vals = sort(unique(dattgo[["hbranch"]]))
 mat_bratgo = matrix(0,ncol =5,nrow=length(bratgo_vals))
@@ -950,7 +950,7 @@ tgo_bra= data.frame(mat_bratgo,check.names = TRUE)
 names(tgo_bra) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r age level of CM-3}
+```{r age-level-of-CM-3}
 
 agetgo_vals = sort(unique(dattgo[["hage"]]))
 mattgo_age = matrix(0,ncol =5,nrow=length(agetgo_vals))
@@ -975,7 +975,7 @@ names(tgo_age) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 #Stochastic dominance
 
 
-```{r Stochastic dominance at national :}
+```{r Stochastic-dominance-at-national}
 # Definition of poverty thresholds
 zben = 246542
 zbfa = 194629
