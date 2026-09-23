@@ -47,12 +47,12 @@ plt.rcParams.update(
 
 
 def fr(value: float, digits: int = 3) -> str:
-    """Format a number the French way, with a comma for the decimal mark."""
-    return f"{value:.{digits}f}".replace(".", ",")
+    """Format a number for a chart label."""
+    return f"{value:.{digits}f}"
 
 
 def thousands(value: int) -> str:
-    return f"{value:,}".replace(",", " ")
+    return f"{value:,}"
 
 
 def fr_ticks(digits: int = 2) -> FuncFormatter:
@@ -75,7 +75,7 @@ def strip(ax, axis="x"):
 def panel_split(ax, res):
     rnd = res["random 5-fold"]
     blk = res["spatial blocks of 0.5 deg"]
-    labels = ["AUC", "Exactitude"]
+    labels = ["AUC", "Accuracy"]
     y = [1.0, 0.0]
     h = 0.30
     gap = 0.035
@@ -95,10 +95,10 @@ def panel_split(ax, res):
     ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
     ax.set_ylim(-0.45, 1.45)
     strip(ax, "x")
-    ax.set_title("Le découpage aléatoire gonfle le score", loc="left")
+    ax.set_title("Random splitting inflates the score", loc="left")
     ax.legend(
-        handles=[Patch(color=BLUE, label="5 blocs aléatoires"),
-                 Patch(color=ORANGE, label="blocs spatiaux de 0,5°")],
+        handles=[Patch(color=BLUE, label="random 5-fold"),
+                 Patch(color=ORANGE, label="spatial blocks of 0.5 degree")],
         loc="upper left", bbox_to_anchor=(0.0, -0.10), ncol=2, frameon=False,
         fontsize=8.5, handlelength=1.1, handleheight=0.9, labelcolor=INK_2,
         borderpad=0.0, columnspacing=1.4, handletextpad=0.5,
@@ -116,8 +116,8 @@ def panel_countries(ax, res):
     mean = res["transfer_mean_auc"]
     ax.set_ylim(-0.7, len(names) - 0.2)
     ax.axvline(mean, color=ORANGE, linewidth=2, zorder=3,
-               ymin=0.0, ymax=(len(names) - 0.45) / (len(names) + 0.5))
-    ax.text(mean, -0.62, f"moyenne {fr(mean)}", color=ORANGE, fontsize=8.5,
+               ymin=0.12, ymax=(len(names) - 0.45) / (len(names) + 0.5))
+    ax.text(mean, -0.62, f"mean {fr(mean)}", color=ORANGE, fontsize=8.5,
             va="center", ha="center")
     for i, auc in enumerate(aucs):
         ax.text(auc - 0.014, i, fr(auc), va="center", ha="right",
@@ -128,8 +128,8 @@ def panel_countries(ax, res):
     ax.set_xlim(0, 1.05)
     ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
     strip(ax, "x")
-    ax.set_title("Transfert d'un pays à l'autre, AUC hors échantillon", loc="left")
-    ax.set_xlabel("pays retiré de l'entraînement (nombre de points)", fontsize=8,
+    ax.set_title("Transfer from one country to the next, held-out AUC", loc="left")
+    ax.set_xlabel("country held out of training (number of points)", fontsize=8,
                   labelpad=8)
 
 
@@ -141,30 +141,30 @@ def panel_conformal(ax, res):
     sizes = [blk["mean_set_size"], brd["mean_set_size"]]
     ax.bar(x, vals, width=0.42, color=[BLUE, ORANGE])
     ax.axhline(0.90, color=INK_2, linewidth=1.6, linestyle=(0, (4, 3)), zorder=3)
-    ax.text(1.55, 0.912, "cible 0,90", color=INK_2, fontsize=8.5,
+    ax.text(1.55, 0.912, "target 0.90", color=INK_2, fontsize=8.5,
             va="bottom", ha="right")
     for xi, v in zip(x, vals):
         ax.text(xi, v - 0.025, fr(v), va="top", ha="center", color="white",
                 fontsize=10, fontweight="bold")
     ax.set_xticks(x)
     ax.set_xticklabels(
-        [f"blocs spatiaux\ntaille moyenne {fr(sizes[0], 2)}",
-         f"entre pays\ntaille moyenne {fr(sizes[1], 2)}"],
+        [f"spatial blocks\nmean set size {fr(sizes[0], 2)}",
+         f"across borders\nmean set size {fr(sizes[1], 2)}"],
         color=INK, fontsize=9.5,
     )
     ax.set_xlim(-0.6, 1.6)
     ax.set_ylim(0, 1.0)
     ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
     strip(ax, "y")
-    ax.set_title("La garantie conforme se dégrade sous déplacement", loc="left")
-    ax.set_xlabel("couverture observée des ensembles de prédiction", fontsize=8,
+    ax.set_title("The conformal guarantee weakens under shift", loc="left")
+    ax.set_xlabel("observed coverage of the prediction sets", fontsize=8,
                   labelpad=8)
 
 
 def panel_importance(ax, res):
     imp = res["grouped_permutation_importance"]
-    pretty = {"sentinel1": "Sentinel-1 (radar)", "sentinel2": "Sentinel-2 (optique)",
-              "era5": "ERA5 (climat)", "srtm": "SRTM (relief)"}
+    pretty = {"sentinel1": "Sentinel-1 (radar)", "sentinel2": "Sentinel-2 (optical)",
+              "era5": "ERA5 (climate)", "srtm": "SRTM (terrain)"}
     items = sorted(imp.items(), key=lambda kv: kv[1])
     names = [pretty[k] for k, _ in items]
     vals = [v for _, v in items]
@@ -183,8 +183,8 @@ def panel_importance(ax, res):
     ax.xaxis.set_major_formatter(fr_ticks(2))
     strip(ax, "x")
     ax.xaxis.set_major_formatter(fr_ticks(2))
-    ax.set_title("Perte d'AUC quand une source est permutée", loc="left")
-    ax.set_xlabel(f"AUC de référence {fr(res['baseline_auc_for_importance'])}",
+    ax.set_title("AUC lost when one source is permuted", loc="left")
+    ax.set_xlabel(f"baseline AUC {fr(res['baseline_auc_for_importance'])}",
                   fontsize=8, labelpad=8)
 
 
@@ -202,14 +202,14 @@ def main() -> None:
     for ax, (_, fn) in zip(axes.ravel(), PANELS):
         fn(ax, res)
     fig.suptitle(
-        "Cartographie des parcelles paysannes par télédétection multi-capteurs",
+        "Mapping smallholder fields with multi-sensor remote sensing",
         x=0.045, y=0.975, ha="left", fontsize=13.5, fontweight="bold", color=INK,
     )
     fig.text(
         0.045, 0.937,
-        f"{thousands(res['n'])} points étiquetés dans 9 pays africains, "
-        f"{res['n_features']} variables saisonnières tirées de Sentinel-1, "
-        "Sentinel-2, ERA5 et SRTM (CropHarvest)",
+        f"{thousands(res['n'])} labelled points in nine African countries, "
+        f"{res['n_features']} season features drawn from Sentinel-1, Sentinel-2, "
+        "ERA5 and SRTM (CropHarvest)",
         ha="left", fontsize=9.5, color=INK_2,
     )
     fig.tight_layout(rect=(0.02, 0.02, 0.99, 0.915), h_pad=5.0, w_pad=5.0)
