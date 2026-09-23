@@ -332,7 +332,7 @@ Chakravarty_bfa = function(datbfa,z,u)
 
 ## calculing  indices 
 
-```{r national level}
+```{r national level-2}
 
 
 matbfa = matrix(0,ncol=5,nrow=1)
@@ -391,7 +391,7 @@ names(bfa_reg) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r sex level}
+```{r sex level-2}
 
 sexbfa_vals = sort(unique(datbfa[["hgender"]]))
 mat_sexbfa = matrix(0,ncol =5,nrow=length(sexbfa_vals))
@@ -434,7 +434,7 @@ bfa_men = data.frame(mat_menbfa,check.names = TRUE)
 names(bfa_men) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r education level}
+```{r education level-2}
 educbfa_vals = sort(unique(datbfa[["heduc"]]))
 mat_educbfa = matrix(0,ncol =5,nrow=length(educbfa_vals))
 
@@ -475,7 +475,7 @@ bfa_bra= data.frame(mat_brabfa,check.names = TRUE)
 names(bfa_bra) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r age level of CM}
+```{r age level of CM-2}
 
 agebfa_vals = sort(unique(datbfa[["hage"]]))
 matbfa_age = matrix(0,ncol =5,nrow=length(agebfa_vals))
@@ -500,7 +500,7 @@ names(bfa_age) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 # Niger 
 
 
-```{r importing dataset}
+```{r importing dataset-2}
 
 ehcvm_welfare_ner2018 <- read_dta("nigr /ehcvm_welfare_ner2018.dta")
 View(ehcvm_welfare_ner2018)
@@ -510,7 +510,7 @@ View(ehcvm_individu_ner2018)
 
 ```
 
-```{r definition of dataframe}
+```{r definition of dataframe-2}
 
 datwn = ehcvm_welfare_ner2018
 datin  = ehcvm_individu_ner2018
@@ -526,7 +526,7 @@ datnig = merge(datin,datwn[,c("hhid","zref","pcexp","hhsize","heduc","hdiploma",
 lpan = function(datnig){ datnig$zref[1] }
 ```
 
-```{r   Foster indices }
+```{r Foster indices-2}
 
 FGT_n = function(datnig,z,a) {
   
@@ -539,7 +539,7 @@ FGT_n = function(datnig,z,a) {
 }
 ```
 
-```{r  Watts }
+```{r Watts-2}
 Watts_n = function(datnig,z) {
   
   y=datnig$pcexp
@@ -552,7 +552,7 @@ Watts_n = function(datnig,z) {
 
 ```
 
-```{r Chakravarty }
+```{r Chakravarty-2}
 
 Chakravarty_n = function(datnig,z,u) {
   
@@ -568,7 +568,7 @@ Chakravarty_n = function(datnig,z,u) {
 
 ## calculating indices 
 
-```{r  national level}
+```{r national level-3}
 # Definition of a matrix to store the data 
 matn = matrix(0, ncol=5, nrow=1)
 
@@ -611,7 +611,7 @@ names(nig_mil) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
    
 ```
 
-```{r region level}
+```{r region level-2}
 
 regn_vals = sort(unique(datnig[["region"]]))
 mat_regn = matrix(0,ncol =5,nrow=length(regn_vals))
@@ -633,7 +633,7 @@ names(nig_reg) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r sex level}
+```{r sex level-3}
 
 sexn_vals = sort(unique(datnig[["hgender"]]))
 mat_sexn = matrix(0,ncol =5,nrow=length(sexn_vals))
@@ -677,7 +677,7 @@ names(nig_men) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 
 ```
 
-```{r education level}
+```{r education level-3}
 
 educn_vals = sort(unique(datnig[["heduc"]]))
 mat_educn = matrix(0,ncol =5,nrow=length(educn_vals))
@@ -747,7 +747,7 @@ names(nig_age) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 # Togo 
 
  
-```{r importing dataset}
+```{r importing dataset-3}
 
 ehcvm_welfare_tgo2018 <- read_dta("TOGO /ehcvm_welfare_tgo2018.dta")
 View(ehcvm_welfare_tgo2018)
@@ -766,7 +766,7 @@ dattgo = merge(datitgo,datwtgo[,c("hhid","zref","pcexp","hhsize","heduc","hdiplo
 ```
 ## définition des fonctions pour le togo
 
-```{r FOSTER indices}
+```{r FOSTER indices-3}
 
 FGT_tgo = function(dattgo,z,a) {
   
@@ -780,7 +780,7 @@ FGT_tgo = function(dattgo,z,a) {
 
 ```
 
-```{r Watts}
+```{r Watts-3}
 
 Watts_tgo = function(dattgo,z) 
   
@@ -795,7 +795,7 @@ Watts_tgo = function(dattgo,z)
 
 ```
 
-```{r Chakravarty}
+```{r Chakravarty-3}
 Chakravarty_tgo = function(dattgo,z,u) 
   
 {
@@ -845,7 +845,7 @@ for (i in seq_along(milieutgo_vals)) {
   names(tgo_mil) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r region level}
+```{r region level-3}
 
 regtgo_vals = sort(unique(dattgo[["region"]]))
 mat_regtgo = matrix(0,ncol =5,nrow=length(regtgo_vals))
@@ -866,7 +866,7 @@ tgo_reg = data.frame(mat_regtgo,check.names = TRUE)
 names(tgo_reg) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r sex level}
+```{r sex level-4}
 
 sextgo_vals = sort(unique(dattgo[["hgender"]]))
 mat_sextgo = matrix(0,ncol =5,nrow=length(sextgo_vals))
@@ -909,7 +909,7 @@ tgo_men = data.frame(mat_mentgo,check.names = TRUE)
 names(tgo_men) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r education level}
+```{r education level-4}
 eductgo_vals = sort(unique(dattgo[["heduc"]]))
 mat_eductgo = matrix(0,ncol =5,nrow=length(eductgo_vals))
 
@@ -950,7 +950,7 @@ tgo_bra= data.frame(mat_bratgo,check.names = TRUE)
 names(tgo_bra) = c("Incidence", "Depth", "Severity", "Watts", "Chakravarty")
 ```
 
-```{r age level of CM}
+```{r age level of CM-3}
 
 agetgo_vals = sort(unique(dattgo[["hage"]]))
 mattgo_age = matrix(0,ncol =5,nrow=length(agetgo_vals))
