@@ -35,6 +35,25 @@ Five self-contained projects, each in its own folder with a short README describ
 | `data-science/MachineLearning/` | SARIMAX, linear/ridge/lasso regression, Random Forest, XGBoost, SHAP | Forecasting mining production from the constructed climate panel |
 | `geocoding-cities/` | Geocoding via Nominatim/OpenStreetMap | City coordinate lookup and cleanup from an Excel city list |
 
+## Training
+
+Courses worked through while writing the code in this repository. The materials are not
+redistributed here; the links point to the authors' own repositories.
+
+- **Introduction to Data Science for Economists, 2025 edition**, taken for credit in the
+  Master 2 at CERDI. Biscaye, Pierre (2025). *Teaching Materials for Introduction to Data
+  Science for Economics.* https://github.com/pbiscaye/IntroDataScienceEcon2025
+- **Introduction to Data Science for Economists, 2026 edition**, worked through
+  independently. Biscaye, Pierre (2026). *Introduction to Data Science for Economists.*
+  Université Clermont Auvergne / CERDI. Licensed under
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+  https://github.com/pbiscaye/IntroDataScienceEcon2026
+- **Data Science Resources Index**, compiled by Pierre Biscaye: a curated index of external
+  tutorials and documentation for Python, R, Stata, Git, Excel and LaTeX, and for Google
+  Earth Engine, machine learning, web scraping, geospatial analysis, big data, generative
+  AI, text analysis and causal inference.
+  https://github.com/pbiscaye/Teaching/blob/main/DataScienceResourcesIndex.md
+
 ## Data
 
 Source data is not included in this repository. Several projects use survey or institutional data (World Bank WDI, Albania LSMS, Rwanda LWH follow-up survey, CRU climate data) that belongs to third-party institutions and cannot be redistributed here. Only the analysis scripts are shared. Scripts reference a relative `./data` path; point it at your own copy of the source data to reproduce the analysis.
