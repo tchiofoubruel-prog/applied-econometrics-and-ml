@@ -1,25 +1,42 @@
 # Applied Econometrics, Geospatial Data and Machine Learning
 
+[![tests](https://github.com/tchiofoubruel-prog/applied-econometrics-and-ml/actions/workflows/tests.yml/badge.svg)](https://github.com/tchiofoubruel-prog/applied-econometrics-and-ml/actions/workflows/tests.yml)
 [![notebook syntax check](https://github.com/tchiofoubruel-prog/applied-econometrics-and-ml/actions/workflows/notebook-check.yml/badge.svg)](https://github.com/tchiofoubruel-prog/applied-econometrics-and-ml/actions/workflows/notebook-check.yml)
 [![R Markdown parse check](https://github.com/tchiofoubruel-prog/applied-econometrics-and-ml/actions/workflows/render-check.yml/badge.svg)](https://github.com/tchiofoubruel-prog/applied-econometrics-and-ml/actions/workflows/render-check.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Analysis code written between 2023 and 2025, in Python, Stata and R Markdown. The Python side
+Analysis code written between 2023 and 2026, in Python, Stata and R Markdown. The Python side
 builds gridded climate data into analysis panels with xarray, rioxarray, rasterstats, geopandas,
 shapely and fiona, geocodes survey locations with geopy and OSMnx, and models the result with
 NumPy, pandas, scikit-learn, statsmodels, XGBoost and SHAP. The Stata and R Markdown sides cover
 impact evaluation, panel econometrics and household survey measurement, on data from Rwanda, Mali,
-Albania and the World Bank indicators.
+Albania and the World Bank indicators. The most recent addition reads satellite imagery:
+[`python-projects/eo-resilience/`](python-projects/eo-resilience/) combines Sentinel-1 radar,
+Sentinel-2 optical, ERA5 reanalysis and SRTM terrain over smallholder plots, and is the one part of
+the repository whose tests are executed rather than only parsed.
 
 **Start here:** [`method-demos/`](method-demos/) holds the two notebooks that run from this
 repository alone, a Monte Carlo cost-benefit analysis with Sobol sensitivity indices and an
 interpretable machine-learning pipeline with its validation design written out in the notebook.
-Both generate their own synthetic inputs, which is why their outputs are kept and why the figures
-below can be reproduced without any external file. The project of longest reach is
+Both generate their own synthetic inputs, which is why their outputs are kept and why the pair of
+figures they produce, shown below the satellite results, can be reproduced without any external
+file. The project of longest reach is
 [`python-projects/data-science/`](python-projects/data-science/), a 1901 to 2023 climate and mining
 panel assembled from CRU TS4.08 NetCDF grids, and the single largest body of code is
 [`python-projects/geocoding-cities/`](python-projects/geocoding-cities/), about 4,300 lines that
 resolve and validate city coordinates.
+
+<p align="center">
+  <img src="python-projects/eo-resilience/figures/africa_results.png" width="94%"
+       alt="Four panels: random versus spatial splitting, transfer between countries, conformal coverage, and permutation importance by sensor">
+</p>
+
+<p align="center"><sub>Crop mapping from Sentinel-1, Sentinel-2, ERA5 and SRTM on 14,852 labelled
+points in nine African countries. Random splitting overstates the AUC by 0.044 against spatial
+blocks, transfer between countries ranges from 0.972 to 0.685, conformal sets built for 90 per cent
+coverage reach 84.3 per cent under spatial blocks and 80.1 per cent across borders, and the radar
+bands carry more signal than the optical ones. Produced by
+<code>python-projects/eo-resilience/scripts/04_africa_benchmark.py</code>.</sub></p>
 
 <p align="center">
   <img src="method-demos/figures/ml_shap.png" width="46%"
@@ -47,14 +64,16 @@ own README.
 ## Code organisation and checks
 
 The repository is organised as Jupyter notebooks and Stata do-files, one folder per project, each
-with its own README covering the data and the method. Two GitHub Actions workflows run on every
-push: the Python notebooks are converted with nbconvert and byte-compiled, and the R Markdown files
-are purled with knitr and parsed. The checks confirm that the code parses and compiles, and they
-stop short of executing anything, since the source data stays outside the repository. Of the
+with its own README covering the data and the method. Three GitHub Actions workflows run on every
+push: the Python notebooks are converted with nbconvert and byte-compiled, the R Markdown files are
+purled with knitr and parsed, and the 95 unit tests of the `eo-resilience` package are executed.
+The first two confirm that the code parses and compiles and stop short of running it, since the
+source data stays outside the repository. The third runs for real, because that package builds its
+own rasters in a temporary directory and needs nothing from outside. Of the
 fourteen notebooks, the two in `method-demos/` keep their executed outputs, and the other twelve
 have their outputs cleared.
 
-Code volume, counted in code cells and script lines rather than in repository bytes: about 5,900
+Code volume, counted in code cells and script lines rather than in repository bytes: about 8,700
 lines of Python, 4,700 of Stata and 2,600 of R Markdown. GitHub's language bar reports notebooks
 under "Jupyter Notebook" and classifies R Markdown as prose, so neither Python nor R appears in it.
 
@@ -70,6 +89,7 @@ Sobol indices, and an interpretable ML pipeline with a leakage-free evaluation d
 | `data-science/Extraction/` | 0.1° grid cut from the CRU gridboxes, NetCDF in xarray, raster writing with rioxarray, zonal means with rasterstats | Mine geolocation and ten monthly climate variables, CRU TS4.08, 1901 to 2023, anomalies against a 1901 to 1950 baseline |
 | `data-science/MachineLearning/` | SARIMAX, linear/ridge/lasso regression, Random Forest, XGBoost, SHAP | Forecasting mining production from the constructed climate panel |
 | `geocoding-cities/` | Geocoding through geopy (Nominatim, Google) and OSMnx, semantic and polygon-inclusion validation | City coordinate lookup, validation and cleanup from an Excel city list |
+| `eo-resilience/` | Cloud masking, spectral indices, median compositing, phenology statistics, spatial block and leave-one-country-out validation, conformal prediction | Crop mapping from Sentinel-1, Sentinel-2, ERA5 and SRTM on 14,852 labelled points in nine African countries |
 
 ### `stata-projects/`
 Six projects, each in its own folder with a short README describing the data and the method.
@@ -104,6 +124,8 @@ Python dependencies are pinned to compatible-release ranges in `requirements.txt
 root: numpy, pandas, xarray, geopandas, shapely, fiona, rioxarray, rasterstats, statsmodels,
 scikit-learn, xgboost, shap, SALib, geopy, osmnx, folium, matplotlib and seaborn. Stata scripts were
 written for Stata 16 or later, and the R Markdown files list their packages at the top of each file.
+The `eo-resilience` package declares its own dependencies in its `pyproject.toml`, numpy and
+rasterio for the computation layer, with pystac-client and pytest as optional extras.
 
 ## Training
 
