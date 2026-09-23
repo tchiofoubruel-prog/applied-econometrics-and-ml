@@ -1,0 +1,72 @@
+{
+ "n": 14852,
+ "n_features": 58,
+ "countries": {
+  "Ethiopia": 830,
+  "Kenya": 3005,
+  "Mali": 1796,
+  "Rwanda": 3591,
+  "Sudan": 403,
+  "Tanzania": 3390,
+  "Togo": 1578,
+  "Uganda": 225,
+  "Zimbabwe": 34
+ },
+ "random 5-fold": {
+  "auc": 0.9502433710374409,
+  "accuracy": 0.8903850351376438
+ },
+ "spatial blocks of 0.5 deg": {
+  "auc": 0.9061287119995939,
+  "accuracy": 0.8100741025238273
+ },
+ "n_blocks": 869,
+ "leave_one_country_out": {
+  "Ethiopia": {
+   "accuracy": 0.8060240963855422,
+   "auc": 0.8973954916112099
+  },
+  "Kenya": {
+   "accuracy": 0.8818635607321131,
+   "auc": 0.8825174842616703
+  },
+  "Mali": {
+   "accuracy": 0.8775055679287305,
+   "auc": 0.9720609022940545
+  },
+  "Rwanda": {
+   "accuracy": 0.6491228070175439,
+   "auc": 0.6853613817899533
+  },
+  "Sudan": {
+   "accuracy": 0.6947890818858561,
+   "auc": 0.7730909809345056
+  },
+  "Tanzania": {
+   "accuracy": 0.6899705014749262,
+   "auc": 0.7878253623509596
+  },
+  "Togo": {
+   "accuracy": 0.6070975918884665,
+   "auc": 0.725946957527469
+  }
+ },
+ "transfer_mean_auc": 0.8177426515385461,
+ "conformal_spatial_blocks": {
+  "coverage": 0.8430187696267698,
+  "mean_set_size": 1.0676872187242519,
+  "accuracy_on_singletons": 0.8317844763376403
+ },
+ "conformal_across_borders": {
+  "coverage": 0.8008529998424122,
+  "mean_set_size": 1.1135357876891028,
+  "accuracy_on_singletons": 0.7825305704713691
+ },
+ "grouped_permutation_importance": {
+  "sentinel1": 0.11894289472059347,
+  "sentinel2": 0.08032971770564737,
+  "era5": 0.10557605522287991,
+  "srtm": 0.0024395241600099205
+ },
+ "baseline_auc_for_importance": 0.9239587107011542
+}
