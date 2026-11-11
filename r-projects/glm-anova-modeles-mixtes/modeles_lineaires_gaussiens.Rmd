@@ -1,0 +1,373 @@
+---
+title: "Modèles linéaires gaussiens : ANOVA, modèles mixtes et sélection de variables"
+subtitle: "Exercice 1  & Exercice 2 "
+author: "YEMELO Bruel"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    df_print: kable
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: flatly
+fontsize: 11pt
+geometry: margin=2.3cm
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.width = 7, fig.height = 4.2
+)
+# Packages utiles. 
+
+library(car)      
+library(nlme)      
+library(knitr)     
+```
+
+\newpage
+
+# Exercice 1 --- Temps de trajet (transport $\times$ heure)
+
+On dispose du temps de trajet mesuré sur **30 individus**, chacun observé **12 fois**,
+en faisant varier le **type de transport** (`transport` : Bus, Vélo, Voiture) et
+l'**heure** (`heure` : Creuse, Pointe)
+
+## Question 1 --- Type de modèle linéaire utilisé
+
+Les deux variables explicatives, `transport` (3 niveaux) et `heure` (2 niveaux), sont
+**qualitatives** (des facteurs). La variable réponse `temps_trajet` est **quantitative**.
+On est donc dans le cadre d'un **modèle factoriel (analyse de variance, ANOVA)** :
+
+* M1 et M2 : ANOVA à **un facteur** ;
+* M3 : ANOVA à **deux facteurs croisés avec interaction** (modèle complet/plein) ;
+* M4 : ANOVA à **deux facteurs croisés sans interaction** (modèle additif).
+
+
+
+## Question 2 --- Effet du type de transport (modèle M1)
+
+### (a) Des p-values contradictoires sont-elles possibles ?
+
+**Oui, c'est tout à fait possible et cohérent.** En effet, on a deux tests de nature
+différente :
+
+* Le test de **Fisher global** de l'`anova(M1)` teste l'**absence d'effet du facteur
+  `transport`** dans son ensemble, c'est-à-dire la nullité **simultanée** des deux
+  paramètres différentiels :
+  $$H_0 : \alpha_{\text{Velo}} = \alpha_{\text{Voiture}} = 0 \quad(\text{i.e. } \mu_{\text{Bus}}=\mu_{\text{Velo}}=\mu_{\text{Voiture}}).$$
+  L'annexe 4.2 donne $F = 4.39$ (ddl $= 2$ et $537$), $p = 0.0129 < 0.05$ : on **rejette $H_0$**.
+
+* Les tests de **Student** du `summary(M1)` testent chacun la **nullité d'un seul
+  paramètre**, c'est-à-dire l'écart d'un niveau par rapport au **niveau de référence**
+   : `transportVelo` ($p = 0.289$) et `transportVoiture`
+  ($p = 0.063$).
+
+Un facteur qualitatif à $J$ niveaux est porté par **plusieurs paramètres** ; son effet
+se teste **globalement par Fisher**, pas paramètre par paramètre. On peut très bien avoir
+un effet global significatif sans qu'aucun écart **au niveau de référence** ne le soit
+individuellement : ici Vélo et Voiture ne diffèrent pas nettement *du Bus*, mais
+diffèrent suffisamment *entre eux* (Voiture vs Vélo $\approx 33.1 - 30.1 = 3.0$) pour
+rendre le facteur globalement significatif.
+### (b) Conclusion sur l'effet du type de transport
+
+On se fie au **test de Fisher global** : le type de transport a un **effet significatif**
+sur le temps de trajet ($p = 0.013$). En revanche, l'ajustement est **très faible**
+($R^2 = 0.016$, soit 1,6 % de la variabilité expliquée) : le transport explique peu de
+chose à lui seul. Les moyennes (annexe 4.1) sont proches : Bus $31.2$, Vélo $30.1$,
+Voiture $33.1$.
+
+## Question 3 --- Commentaire du modèle M2 (effet de l'heure)
+
+`heure` est un facteur à 2 niveaux ; le test de Fisher et le test de Student sont alors
+**équivalents** ($F = 32.86 = 5.732^2 = t^2$, même $p = 1.66\times10^{-8}$). L'effet de
+l'heure est **hautement significatif** :
+
+* moyenne en heure **creuse** : $\hat\mu = 29.08$ ;
+* `heurePointe` $= +4.71$ : en heure de pointe, le temps de trajet **augmente en moyenne
+  de $4{,}7$ unités** (cf. annexe 4.1 : $29.1 \to 33.8$).
+
+L'ajustement reste modeste ($R^2 = 0.058$) mais nettement meilleur que M1 (AIC $3982 <
+3997$) : **l'heure explique mieux le temps de trajet que le type de transport.**
+
+## Question 4 --- Modèles M3 (avec interaction) et M4 (additif)
+
+### (a) Comparaison et choix
+
+| Critère | M3 (`transport*heure`) | M4 (`transport+heure`) |
+|---|---|---|
+| Variables | transport, heure, **interaction** | transport, heure |
+| Paramètres | 6 | 4 |
+| $R^2$ ajusté | **0.0806** | 0.0685 |
+| AIC | **3962** | 3971 |
+| Interaction `transport:heure` | $F = 4.54,\ p = 0.011$ | --- |
+
+Le test **Type III** de l'interaction dans M3 est **significatif** ($p = 0.011 < 0.05$).
+Selon la démarche hiérarchique du cours, **dès lors que l'interaction est significative,
+on conserve le modèle complet** (toute variable entrant dans une interaction doit rester
+dans le modèle, même si son effet propre n'est pas significatif). M3 a de plus le
+**meilleur AIC** et le meilleur $R^2$ ajusté.
+
+$\Rightarrow$ **On retient M3.**
+
+### (b) Quel diagramme d'interaction provient bien des données ?
+
+C'est le **diagramme de gauche** (annexe 4.3). Justification par les moyennes par cellule
+(annexe 4.1) :
+
+| | Creuse | Pointe | Écart Pointe$-$Creuse |
+|---|---|---|---|
+| Bus | 29.0 | 32.9 | $+3.9$ |
+| Vélo | 29.1 | 31.0 | $+1.9$ |
+| Voiture | 29.1 | **38.4** | $+9.3$ |
+
+En heure creuse, les trois moyennes sont **quasi confondues ($\approx 29$)** : les trois
+courbes **partent du même point** à gauche, puis **divergent** vers la droite (pentes
+différentes, la Voiture montant le plus fort). C'est exactement le comportement du
+**graphique de gauche**. Le graphique de droite montre des courbes parties de niveaux
+**déjà séparés** en creuse, ce qui contredit les données (effet de transport quasi nul en
+creuse) : il n'a donc pas été tracé à partir de ces données.
+
+### (c) Interprétation des effets (à partir de M3)
+
+
+* **Effet de l'heure (sur la référence Bus)** : `heurePointe` $= +4.34$ ($p = 0.002$). En
+  heure de pointe, le temps de trajet **en Bus** augmente de $\approx 4{,}3$.
+* **Effets propres du transport en heure creuse** : `transportVelo` ($+0.12$) et
+  `transportVoiture` ($+0.16$) sont **non significatifs** : en heure **creuse**, le mode de
+  transport ne change **pas** le temps de trajet (cohérent avec les $\approx 29$ partout).
+* **Interactions** : `transportVoiture:heurePointe` $= +3.52$ ($p = 0.077$) et
+  `transportVelo:heurePointe` $= -2.42$ ($p = 0.223$). Globalement l'interaction est
+  significative (Type III, $p = 0.011$).
+
+**Lecture d'ensemble :** l'effet de l'heure de pointe **dépend du mode de transport**. La
+pénalité d'heure de pointe est faible à vélo ($+1{,}9$), modérée en bus ($+3{,}9$) et
+**forte en voiture ($+9{,}3$)**. Autrement dit, prendre la voiture est pénalisant
+**surtout aux heures de pointe** ; en heure creuse, les trois modes se valent.
+
+## Question 5 --- Modèles mixtes M5 et M6 (annexe 4.4)
+
+### Contenu et différence avec M3/M4
+
+M5 et M6 reprennent **exactement** les effets fixes de M3 et M4
+(`transport*heure` et `transport+heure`) mais ajoutent un **effet aléatoire d'usager**
+`random = ~1 | usager` : un **intercept aléatoire** $A_{\text{usager}} \sim
+\mathcal{N}(0,\sigma_a^2)$. Ce sont donc des **modèles linéaires mixtes** estimés par
+**REML**.
+
+* M3, M4 (effets fixes seuls) supposent les 540 observations **indépendantes**.
+* M5, M6 reconnaissent que toutes les mesures d'un même usager
+  sont **corrélées** (mesures répétées sur le même sujet). L'intercept aléatoire capte le
+  **niveau propre de chaque usager** ; deux observations d'un même usager ont une
+  covariance $\sigma_a^2$.
+
+### Intérêt méthodologique
+
+Ignorer la structure « mesures répétées » (M3/M4) viole l'hypothèse d'indépendance des
+résidus et **fausse les erreurs-standard et les tests**. Les modèles mixtes M5/M6
+**corrigent** cela en séparant la variabilité **inter-usagers** ($\hat\sigma_a = 1.37$)
+de la variabilité **résiduelle intra** ($\hat\sigma = 9.32$). C'est la modélisation
+**correcte** ici : il y a bien un facteur (usager) dont les niveaux observés sont un
+**échantillon** d'une population plus large, donc à traiter en **effet aléatoire**.
+
+### Quel modèle est meilleur ? M5 vs M6, et vs M3
+
+Comme pour le cas à effets fixes, on teste d'abord **l'interaction** dans le modèle
+complet M5 :
+
+* M5, `anova(type="marginal")` : `transport:heure` $F = 4.63,\ p = 0.010 < 0.05$
+  $\Rightarrow$ **interaction significative**, on **conserve M5** (le complet) et on
+  écarte M6 (additif).
+* AIC : M5 $= 3952 <$ M6 $= 3963$, ce qui **confirme** le choix de M5.
+
+**M5 est-il meilleur que M3.** M5 a la même structure d'effets
+fixes que M3 mais un **AIC bien plus faible** (3952 contre 3962) car il modélise la
+corrélation intra-usager. L'effet aléatoire est réel : l'intervalle de confiance de
+`sd(Intercept)` est $[0.53,\ 3.54]$, qui **ne contient pas 0** $\Rightarrow$ variabilité
+inter-usagers significative. **On retient donc M5.**
+
+### Interprétation des résultats de M5
+
+* **Composantes de la variance** : $\hat\sigma_a = 1.37$ (inter-usagers) vs
+  $\hat\sigma = 9.32$ (résiduelle). La part inter-usagers est réelle mais modeste :
+  l'essentiel de la variabilité reste intra (corrélation intra-classe
+  $\rho = \sigma_a^2/(\sigma_a^2+\sigma^2) = 1.37^2/(1.37^2+9.32^2) \approx 0.02$).
+* **Effets fixes** (mêmes signes/valeurs que M3, ce qui est rassurant) : intercept
+  Bus/Creuse $= 28.99$ ; `heurePointe` $= +4.34$ ($p = 0.002$) ; effets propres de
+  transport en creuse non significatifs ; interaction globale significative
+  ($p = 0.010$), portée surtout par **Voiture $\times$ Pointe** ($+3.52$).
+
+**Conclusion:** le meilleur modèle est **M5**, modèle mixte à deux
+facteurs croisés **avec interaction** et intercept aléatoire d'usager. Le temps de trajet
+augmente aux heures de pointe, d'autant plus qu'on circule **en voiture** ; en heure
+creuse, le mode de transport importe peu. La prise en compte de l'usager en effet
+aléatoire est justifiée par le plan en mesures répétées et améliore l'ajustement.
+
+\newpage
+
+# Exercice 2 --- `datasante` : capacité respiratoire
+
+On cherche à expliquer la **capacité respiratoire** (`Cap.Resp`) à partir de :
+`CP` (condition physique), `Sport`, `Alimentation`, `IndiceSante`, `Age`, `IMC`.
+Pour les 5 scores, *plus c'est élevé, mieux c'est*. Points clés énoncés :
+`Sport` est calculé à partir du **type de sport et de la durée** ; `IndiceSante` est
+**calculé à partir de `Sport` et `Alimentation`**. Cela annonce de la **colinéarité**.
+
+## Importation et description des données
+
+```{r ex2-import}
+sante <- read.csv("datasante.csv", header = TRUE, sep = ",")
+str(sante)
+summary(sante)
+```
+
+```{r ex2-desc, echo=FALSE}
+kable(round(t(sapply(sante, function(x)
+  c(Moyenne = mean(x), Ecart_type = sd(x), Min = min(x), Max = max(x)))), 2),
+  caption = "Statistiques descriptives des variables")
+```
+
+Toutes les variables sont quantitatives : on est *a priori* dans un cadre de
+**régression linéaire multiple**.
+
+## Étude des corrélations (étape indispensable)
+
+```{r ex2-corr}
+M <- cor(sante)
+round(M, 2)
+```
+
+```{r ex2-pairs, fig.height=6, fig.width=6.5, echo=FALSE}
+pairs(sante, lower.panel = NULL, pch = 20, cex = 0.6,
+      main = "Nuages de points deux-à-deux")
+```
+
+**Deux problèmes de multicolinéarité sévères apparaissent:**
+
+* `Sport` et `IndiceSante` : **$r = 1.00$**. C'est attendu, puisque `IndiceSante` est
+  *construit* à partir de `Sport` et `Alimentation`. On vérifie d'ailleurs qu'une
+  régression `IndiceSante ~ Sport + Alimentation` donne $R^2 \approx 0.9995$ : ces deux
+  variables sont **redondantes** (combinaison linéaire). Les inclure ensemble rendrait
+  $X^\top X$ singulière. **On ne garde qu'une seule des deux.** On retient `Sport`
+  (variable « brute », plus interprétable) et on écarte `IndiceSante`.
+* `CP` et `Age` : **$r = -0.97$** (quasi-colinéarité). Les conserver ensemble gonfle les
+  variances des estimateurs (VIF $\approx 18$ chacun) et déstabilise les coefficients.
+  On en gardera **au plus une** des deux.
+
+```{r ex2-redondance}
+# IndiceSante est une combinaison linéaire de Sport et Alimentation
+summary(lm(IndiceSante ~ Sport + Alimentation, data = sante))$r.squared
+```
+
+Corrélations **brutes** avec la réponse (effet de chaque variable prise seule) :
+
+```{r ex2-cor-y, echo=FALSE}
+kable(round(sort(M["Cap.Resp", -1]), 3), col.names = "cor avec Cap.Resp",
+      caption = "Corrélations marginales avec la capacité respiratoire")
+```
+
+`Sport`/`IndiceSante` ($r \approx 0.33$) et `IMC` ($r = 0.21$) sont les plus liées à la
+réponse ; `Alimentation`, `Age`, `CP` sont marginalement très faibles.
+
+## Modèle complet et diagnostic de colinéarité (VIF)
+
+On part d'un modèle **sans les variables redondantes** : on retire `IndiceSante`
+(redondante avec `Sport`). On vérifie les VIF.
+
+```{r ex2-vif}
+mod_complet <- lm(Cap.Resp ~ CP + Sport + Alimentation + Age + IMC, data = sante)
+vif(mod_complet)
+```
+
+Les VIF de `CP` et `Age` sont $\approx 18$ ($> 10$) : **multicolinéarité confirmée**. On
+retire la moins liée à la réponse / la moins interprétable. `CP` et `Age` ayant des VIF
+quasi identiques, on testera la sélection automatique pour trancher.
+
+## Sélection de variables (backward AIC)
+
+```{r ex2-step, results='hide'}
+mod_sel <- step(mod_complet, direction = "backward")
+```
+
+```{r ex2-step-res}
+summary(mod_sel)
+```
+
+La sélection descendante par AIC aboutit à `Cap.Resp ~ CP + Sport + Age`. **Mais** `CP` et
+`Age` sont colinéaires ($r=-0.97$) : dans ce modèle, `Age` ressort **non significatif**
+($p \approx 0.085$) et le couple reste instable. On
+**supprime à la main** la variable non significative (`Age`), puis on réévalue.
+
+```{r ex2-final}
+mod1 <- lm(Cap.Resp ~ Sport + CP, data = sante)
+summary(mod1)
+mod2 <- lm(Cap.Resp ~ Sport, data = sante)
+summary(mod2)
+AIC(mod_sel, mod1, mod2)
+```
+
+Une fois `Age` retiré, `CP` devient lui aussi non significatif ($p \approx 0.17$). Le
+modèle **parcimonieux, stable et interprétable** est donc :
+
+$$\widehat{\texttt{Cap.Resp}} = \beta_0 + \beta_1\,\texttt{Sport}.$$
+
+```{r ex2-modele-retenu}
+modele <- lm(Cap.Resp ~ Sport, data = sante)
+summary(modele)
+confint(modele)
+```
+
+> **Choix retenu.** `Cap.Resp ~ Sport`. Il a un AIC comparable au modèle issu du `step`
+> (les variables supplémentaires n'apportent rien d'utile une fois la colinéarité
+> écartée), tout en étant le plus simple et le seul dont **tous** les coefficients sont
+> significatifs. On aurait obtenu strictement le même ajustement avec `IndiceSante` à la
+> place de `Sport` (puisque $r = 1$), mais `Sport` est plus directement interprétable.
+
+## Validation du modèle
+
+```{r ex2-diag, fig.height=6, fig.width=7}
+par(mfrow = c(2, 2))
+plot(modele)
+par(mfrow = c(1, 1))
+```
+
+* **Residuals vs Fitted** : nuage sans structure, moyenne $\approx 0$ $\Rightarrow$
+  linéarité et moyenne nulle des résidus acceptables.
+* **Normal Q-Q** : points alignés sur la bissectrice $\Rightarrow$ normalité des résidus
+  plausible (échantillon $n = 120 > 30$, le modèle est de toute façon robuste).
+* **Scale-Location** : dispersion à peu près constante $\Rightarrow$ homoscédasticité
+  acceptable.
+* **Residuals vs Leverage** : pas de point au-delà des distances de Cook critiques
+  $\Rightarrow$ pas d'observation aberrante influente majeure.
+
+## Interprétation et conclusion
+
+```{r ex2-interpret, echo=FALSE}
+co <- coef(summary(modele))
+kable(round(co, 4), caption = "Coefficients du modèle retenu Cap.Resp ~ Sport")
+```
+
+* La pente de `Sport` est **positive et significative** ($p \approx 2\times10^{-4}$) :
+  **plus le score d'activité sportive est élevé, plus la capacité respiratoire est
+  grande**, ce qui est cohérent. Concrètement, une augmentation de 10 points du score
+  `Sport` correspond à une hausse moyenne d'environ $10 \times \hat\beta_1 \approx 0{,}65$
+  unité de capacité respiratoire.
+* L'**ajustement est faible** ($R^2 \approx 0.11$) : le sport n'explique qu'une petite
+  part de la capacité respiratoire ; d'autres déterminants non mesurés interviennent.
+* **Variables écartées et pourquoi :** `IndiceSante` (colinéarité parfaite avec `Sport`,
+  $r=1$) ; `Age` et `CP` (colinéarité mutuelle $r=-0.97$, non significatifs une fois la
+  redondance traitée) ; `Alimentation` et `IMC` (non significatifs).
+
+**Conclusion.** La démarche met d'abord en évidence deux pièges de **multicolinéarité**
+(`Sport`/`IndiceSante` parfaitement redondants ; `CP`/`Age` quasi redondants), qu'il faut
+traiter **avant** toute sélection automatique. Après nettoyage et sélection, le modèle
+retenu `Cap.Resp ~ Sport` indique un **effet positif et significatif de l'activité
+sportive** sur la capacité respiratoire, même si la part de variance expliquée reste
+modeste.
+
+
