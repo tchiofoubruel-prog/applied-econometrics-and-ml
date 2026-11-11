@@ -1,0 +1,938 @@
+---
+title: "Estimation de la valeur foncière totale par sondage"
+subtitle: "Comparaison de huit plans de sondage sur les données DVF 2019"
+author: "YEMELO Bruel"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+lang: fr
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    fig_caption: true
+    keep_tex: false
+    latex_engine: pdflatex
+geometry: margin=2.5cm
+header-includes:
+  - \usepackage{amsmath}
+  - \usepackage{booktabs}
+  - \usepackage{float}
+  - \renewcommand{\arraystretch}{1.1}
+  - \floatplacement{figure}{H}
+---
+
+```{r}
+rm(list=ls())
+```
+
+
+```{r setup, include=FALSE}
+# ----  -------------------------------
+chemin_base <- "base8.csv"    
+ma_graine   <- 342674         
+taux_final  <- 0.02          # taux de sondage (2 %)
+# ---------------------------------------------------------------------------
+
+
+knitr::opts_chunk$set(
+  echo = FALSE, warning = FALSE, message = FALSE,
+  fig.align = "center", fig.pos = "H"
+)
+
+# Packages
+library(sampling)   
+library(survey)    
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+
+options(scipen = 999)
+set.seed(ma_graine)
+
+# Fonction utilitaire : coefficient de variation d'un estimateur
+# CV(theta_hat) = sqrt(var_estimee) / theta_hat   (chap. 2, formule (2.20))
+cv <- function(estim, var_estim) sqrt(var_estim) / estim
+```
+
+# Introduction et cadre
+
+L'objectif de notre travail est d'estimer le **total** de la variable
+*Valeur.fonciere* sur une population de locaux vendus en France en 2019
+(données DVF), en mettant en œuvre puis en comparant plusieurs stratégies
+d'échantillonnage : plan aléatoire simple (SI), plan stratifié (STSI),
+plans en grappes et à deux degrés, et estimation par le ratio.
+
+On note $U$ la population, $N$ sa taille, $y_k$ la valeur
+foncière de l'unité $k$, et le paramètre d'intérêt est le total
+$$
+t_y = \sum_{k\in U} y_k
+\qquad\text{(chap. 1, but d'un sondage).}
+$$
+
+L'estimateur de référence est l'estimateur de **Horvitz--Thompson** (H-T)
+par les valeurs dilatées (chap. 3, formule (3.5)) :
+$$
+\hat t_{y\pi} = \sum_{k\in s} \frac{y_k}{\pi_k} = \sum_{k\in s} w_k\,y_k ,
+\qquad w_k = \frac{1}{\pi_k},
+$$
+où $\pi_k$ est la probabilité d'inclusion du premier ordre de $k$ et $s$
+l'échantillon tiré.
+
+
+
+# Construction de la population de travail 
+
+On tire aléatoirement 95 % de `base8` par un plan aléatoire simple sans
+remise (`srswor`), ce qui définit notre population de travail `tableR`,
+de taille $N = 258\,549$. **La graine choisie est `r ma_graine`** ; elle
+est reportée ici pour que le correcteur reconstitue exactement la même
+population.
+
+```{r extraction, echo=TRUE}
+base8 <- read.csv(chemin_base, stringsAsFactors = FALSE)
+NN <- dim(base8); NN          
+
+nn <- round(95 * dim(base8)[1] / 100); nn   
+
+set.seed(ma_graine)
+tirage <- srswor(nn, NN[1])
+tableR <- base8[which(tirage == 1), ]
+dim(tableR)
+
+head(tableR)                  
+```
+
+
+
+```{r pop-setup, include=FALSE}
+# Population de travail
+N <- nrow(tableR)
+y <- tableR$Valeur.fonciere
+
+# Taille d'échantillon finale imposée (2 % de N)
+n_final <- round(taux_final * N)
+
+# Variance "population" S^2_yU (chap. 1, formule (1.1)) : diviseur N-1
+S2 <- function(v) var(v)   
+```
+
+# Q1 --- Total sur la population
+
+Le total exact sur la population de travail vaut $t_y = \sum_{k\in U} y_k$.
+
+```{r q1-total}
+ty_pop <- sum(tableR$Valeur.fonciere)
+```
+
+```{r q1-affichage}
+cat("Total des valeurs foncières sur la population :",
+    format(ty_pop, big.mark = " "), "euros\n")
+cat("Soit en milliards d'euros :", round(ty_pop / 1e9, 2), "\n")
+```
+
+Le total exact de la valeur foncière sur notre population de travail ($U$)
+s'élève précisément à 82 212 835 040 euros (soit environ 82,21 milliards d'euros). 
+Cette valeur globale certaine constitue notre unique point de référence empiriqu.
+Elle permettra de quantifier de manière exacte le biais de 
+sélection de chacun de nos plans de sondage et servira de base de calcul pour 
+les erreurs quadratiques moyennes (EQM) lors de la phase de simulation.
+
+# Q2 --- Description statistique des données
+
+On décrit la variable d'intérêt et ses liens avec les variables
+susceptibles de servir à la stratification ou comme variable auxiliaire.
+
+```{r q2-resume-y}
+summary(tableR$Valeur.fonciere)
+sd(tableR$Valeur.fonciere)
+
+# Coefficient de variation de la population (chap. 2, formule (2.18))
+# CV_yU = S_yU / ybar_U
+CV_yU <- sd(tableR$Valeur.fonciere) / mean(tableR$Valeur.fonciere)
+CV_yU
+```
+
+```{r q2-hist, fig.cap="Distribution de la valeur foncière (échelle logarithmique).", fig.width=6, fig.height=3.5}
+ggplot(tableR, aes(x = Valeur.fonciere)) +
+  geom_histogram(bins = 60, fill = "grey40", colour = "white") +
+  scale_x_log10(labels = scales::comma) +
+  labs(x = "Valeur foncière (euros, échelle log)", y = "Effectif") +
+  theme_minimal(base_size = 11)
+```
+
+```{r q2-typelocal}
+tableR %>%
+  count(Type.local) %>%
+  mutate(pct = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n)) %>%
+  kable(caption = "Répartition des locaux par type",
+        col.names = c("Type de local", "Effectif", "Part (%)"),
+        booktabs = TRUE)
+```
+
+```{r q2-lien-surface, fig.cap="Valeur foncière en fonction de la surface bâtie.", fig.width=6, fig.height=3.5}
+cor_surf <- cor(tableR$Valeur.fonciere, tableR$Surface.reelle.bati,
+                use = "complete.obs")
+cor_surf
+
+ggplot(tableR, aes(x = Surface.reelle.bati, y = Valeur.fonciere)) +
+  geom_point(alpha = 0.05) +
+  scale_x_log10() + scale_y_log10() +
+  labs(x = "Surface bâtie (m², log)", y = "Valeur foncière (euros, log)") +
+  theme_minimal(base_size = 11)
+```
+
+> **Commentaire.** La valeur foncière est **fortement asymétrique à
+> droite** (quelques transactions très élevées tirent la moyenne au-dessus
+> de la médiane), d'où l'échelle logarithmique. Son coefficient de
+> variation `CV_yU` est élevé, ce qui annonce qu'un plan SI brut donnera
+> une variance importante. Le **type de local** sépare des sous-populations
+> de niveaux moyens très différents : c'est un bon candidat pour
+> **stratifier** (Q4). La **surface bâtie** est corrélée positivement à la
+> valeur (coefficient $\approx$ `r round(cor_surf,2)`). 
+
+\newpage
+
+# Plans SI et STSI
+
+## Q3 --- Plan aléatoire simple sans remise (SI)
+
+On tire un échantillon de taille $n = 2\% \times N$ par plan SI
+(chap. 2). Toutes les unités ont la même probabilité d'inclusion
+$$
+\pi_k = \frac{n}{N}\quad\text{(chap. 2),}\qquad
+w_k=\frac{1}{\pi_k}=\frac{N}{n}.
+$$
+L'estimateur H-T du total se réduit à la valeur dilatée de la moyenne
+d'échantillon (chap. 2, estimation du total) :
+$$
+\hat t_{y\pi} = N\,\bar y_s = \frac{N}{n}\sum_{k\in s} y_k .
+$$
+Sa variance et son estimateur (chap. 2, formules (2.3) et (2.4)) sont
+$$
+\operatorname{var}(\hat t_{y\pi}) = N^2\,(1-f)\,\frac{S^2_{yU}}{n},
+\qquad
+\widehat{\operatorname{var}}(\hat t_{y\pi}) = N^2\,(1-f)\,\frac{S^2_{ys}}{n},
+\qquad f=\frac{n}{N}.
+$$
+
+```{r q3-si}
+set.seed(ma_graine)
+n_SI <- n_final
+f_SI <- n_SI / N
+
+s_SI   <- srswor(n_SI, N)
+ech_SI <- tableR[s_SI == 1, ]
+yS     <- ech_SI$Valeur.fonciere
+
+# Estimateur HT du total
+ty_SI   <- N * mean(yS)
+# Variance estimée (2.4)
+var_SI  <- N^2 * (1 - f_SI) * var(yS) / n_SI
+cv_SI   <- cv(ty_SI, var_SI)
+
+c(total = ty_SI, variance = var_SI, cv = cv_SI)
+```
+
+```{r q3-survey, include=FALSE}
+# Vérification avec le package survey (poids = N/n, fpc = N)
+ech_SI$pik <- n_SI / N
+d_SI <- svydesign(ids = ~1, fpc = ~rep(N, n_SI),
+                  weights = ~I(1/pik), data = ech_SI)
+svytotal(~Valeur.fonciere, d_SI)
+```
+
+> **Commentaire.** 
+
+> L'estimation de Horvitz-Thompson du total par le plan SI donne un montant de
+> 83 442 766 657 euros, ce qui représente une surestimation d'environ 1,5 % par 
+> rapport à la valeur réelle de la population. L'estimateur affiche une variance 
+> de $8,03 \times 10^{18}$ et un coefficient de variation (CV) de 3,40 %. Ce CV, 
+> bien qu'inférieur au seuil critique de 5 %, traduit une marge d'incertitude non 
+> négligeable qui s'explique par la très forte asymétrie à droite et la dispersion 
+> intrinsèque des valeurs foncières au niveau national.
+
+
+
+## Q4 --- Plan stratifié (STSI)
+
+On choisit comme **variable de stratification le type de local**
+(`Code.type.local`) : maisons, appartements, dépendances, locaux
+industriels/commerciaux. Ces strates regroupent des biens de niveaux de
+prix homogènes en interne et bien différents entre eux, ce qui est
+exactement la situation où la stratification est payante (chap. 5,
+introduction).
+
+Dans le plan STSI (chap. 5 §5.3), on tire indépendamment un plan SI dans
+chaque strate $U_h$ ; l'estimateur H-T du total est la somme des
+estimateurs par strate (formule (5.1)) :
+$$
+\hat t_{U\pi}=\sum_{h=1}^{H} N_h\,\bar y_{s_h},
+$$
+de variance estimée (formule (5.3))
+$$
+\widehat{\operatorname{var}}_{STSI}(\hat t_{U\pi})
+=\sum_{h=1}^{H} N_h^2\left(\frac{1}{n_h}-\frac{1}{N_h}\right)S^2_{y s_h}.
+$$
+
+**Affectation.** À budget (taille totale $n$) fixé, l'affectation
+**optimale de Neyman** (chap. 5, formule (5.7)) répartit
+$$
+n_h = n\,\frac{N_h\,S_{yU_h}}{\sum_{i=1}^{H} N_i\,S_{yU_i}} .
+$$
+On l'utilise ici car les dispersions $S_{yU_h}$ diffèrent nettement d'une
+strate à l'autre (les locaux commerciaux sont bien plus dispersés que les
+dépendances). À titre de repère on calcule aussi l'affectation
+proportionnelle (formule (5.9)).
+
+```{r q4-strates}
+# Variable de stratification
+tableR$strate <- tableR$Code.type.local
+
+
+info_str <- tableR %>%
+  group_by(strate) %>%
+  summarise(Nh = n(),
+            Sh = sd(Valeur.fonciere),
+            .groups = "drop")
+info_str
+
+n_STSI <- n_final
+
+# --- Affectation de Neyman (5.7) ---
+info_str <- info_str %>%
+  mutate(NhSh = Nh * Sh,
+         nh_neyman = round(n_STSI * NhSh / sum(NhSh)))
+
+# Garde-fous : au moins 2 unités par strate, et nh <= Nh
+info_str <- info_str %>%
+  mutate(nh_neyman = pmin(pmax(nh_neyman, 2), Nh))
+
+info_str %>%
+  select(strate, Nh, Sh, nh_neyman) %>%
+  kable(caption = "Strates et affectation de Neyman",
+        col.names = c("Strate (type)", "N_h", "S_yh", "n_h (Neyman)"),
+        booktabs = TRUE, digits = 0)
+```
+
+```{r q4-tirage}
+
+tableR_tri <- tableR[order(tableR$strate), ]
+
+# Vecteur des tailles par strate, dans l'ordre des niveaux
+ordre_str <- sort(unique(tableR_tri$strate))
+nh_vec <- info_str$nh_neyman[match(ordre_str, info_str$strate)]
+
+set.seed(ma_graine)
+st <- sampling::strata(tableR_tri, stratanames = "strate",
+                       size = nh_vec, method = "srswor")
+ech_ST <- getdata(tableR_tri, st)
+
+# Estimateur HT stratifié (5.1) et variance (5.3)
+res_ST <- ech_ST %>%
+  group_by(strate) %>%
+  summarise(nh = n(),
+            ybar = mean(Valeur.fonciere),
+            s2 = var(Valeur.fonciere),
+            .groups = "drop") %>%
+  left_join(info_str %>% select(strate, Nh), by = "strate") %>%
+  mutate(that_h = Nh * ybar,
+         var_h  = Nh^2 * (1/nh - 1/Nh) * s2)
+
+ty_ST  <- sum(res_ST$that_h)
+var_ST <- sum(res_ST$var_h)
+cv_ST  <- cv(ty_ST, var_ST)
+
+c(total = ty_ST, variance = var_ST, cv = cv_ST)
+```
+
+> **Commentaire.**
+> En appliquant le plan STSI basé sur l'affectation optimale de Neyman, le total
+> estimé est de 81 065 894 698 euros, soit une légère sous-estimation d'environ
+> 1,4 %. L'intérêt majeur de cette approche réside dans l'optimisation des tailles
+> d'échantillons par strate ($n_h$) : la formule de Neyman a conduit à 
+> sur-échantillonner massivement la strate 2 (appartements : $n_2 = 1703$ pour 
+> $N_2 = 30272$) et la strate 4 (locaux industriels et commerciaux : $n_4 = 619$ 
+> pour $N_4 = 17473$) en raison de leurs fortes dispersions internes 
+> ($S_{y2} \approx 1,63$ M€ et $S_{y4} \approx 1,03$ M€, à l'inverse,la strate 1 
+> (maisons), bien que dominante en taille ($N_1 = 187825$), présente un 
+> écart-type plus faible ($S_{y1} \approx 299\,662$ €) et se voit attribuer 
+> seulement 1938 tirages.
+
+## Q5 --- Comparaison SI vs STSI
+
+On compare les deux plans **à taille égale** via le rapport des variances,
+c'est-à-dire l'**effet de plan** (chap. 3 §3.3, *design effect*) :
+$$
+\mathrm{Deff} = \frac{\widehat{\operatorname{var}}_{STSI}(\hat t)}
+                     {\widehat{\operatorname{var}}_{SI}(\hat t)} .
+$$
+Un $\mathrm{Deff}<1$ signifie que la stratification est efficace.
+
+```{r q5-comparaison}
+comp <- data.frame(
+  Plan = c("SI", "STSI (Neyman)"),
+  Total = c(ty_SI, ty_ST),
+  Variance = c(var_SI, var_ST),
+  CV = c(cv_SI, cv_ST)
+)
+comp$Deff <- comp$Variance / var_SI
+
+kable(comp, caption = "Comparaison SI vs STSI",
+      booktabs = TRUE, digits = c(0, 0, 0, 4, 3))
+```
+
+> **Conclusion.** 
+ 
+> Le coefficient de variation descend à 2,90 % (contre 3,40 % pour le plan SI ) 
+> et l'effet de plan (Deff) s'établit à 0,69. Ce gain d'efficacité de 31 %
+> valide notre choix de variable de stratification : le type de local segmente
+> avec succès la population en sous-populations hautement homogènes en interne,
+> permettant d'éliminer la part majeure de la variance inter-strate de la
+> variance globale de l'estimateur
+
+\newpage
+
+# Plans en grappes et à deux degrés
+
+## Q6 --- Grappes vs deux degrés
+
+Les deux plans partitionnent d'abord la population en **unités primaires**
+(UP) et tirent un échantillon d'UP (chap. 8 §8.1). La différence est au
+second degré :
+
+- **Plan en grappes** (chap. 8 §8.2) : dans chaque UP retenue, on observe
+  **toutes** les unités secondaires (US). On connaît donc le total exact
+  $t_i=\sum_{U_i}y_k$ de chaque grappe.
+- **Plan à deux degrés** (chap. 8 §8.3) : dans chaque UP retenue, on ne
+  tire qu'un **échantillon** d'US, d'où une *estimation* de $t_i$.
+
+Le plan en grappes est donc un cas particulier du plan à deux degrés où le
+second degré recense entièrement l'UP.
+
+## Q7 --- Pourquoi un plan à plusieurs degrés ici ?
+
+Un plan SI direct sur les `r format(nrow(tableR), big.mark=" ")` locaux
+supposerait une **base de sondage** exhaustive et la possibilité d'aller
+auprès de n'importe quel local ; les unités tirées seraient dispersées sur
+tout le territoire, d'où des **coûts de collecte élevés et variables**
+(chap. 8, introduction). Comme la valeur de chaque local est enregistrée
+dans sa **mairie**, il est normal de tirer d'abord des communes (ou des
+départements) puis de collecter sur place : on ne mobilise une base que
+pour les UP retenues. L'inconvénient (chap. 8 §8.2.3) est que les unités
+d'une même grappe **se ressemblent**, ce qui dégrade la précision à taille
+égale compensé par un coût bien moindre.
+
+## Q8 --- Plan en grappes de départements
+
+UP = **départements**. On tire les départements par plan SI
+(plan SIC, chap. 8 §8.2.2) et on observe **tous** les locaux des
+départements retenus. En notant $t_i$ le total du département $i$,
+$N_I$ le nombre de départements, $n_I$ le nombre tirés et
+$f_I=n_I/N_I$, l'estimateur H-T (chap. 8, plan SIC) est
+$$
+\hat t_\pi = \frac{N_I}{n_I}\sum_{i\in s_I} t_i = N_I\,\bar t_{s_I},
+$$
+de variance estimée
+$$
+\widehat{\operatorname{var}}_{SIC}(\hat t_\pi)
+= N_I^2\,\frac{1-f_I}{n_I}\,S^2_{t s_I},
+\qquad
+S^2_{t s_I}=\frac{1}{n_I-1}\sum_{i\in s_I}(t_i-\bar t_{s_I})^2 .
+$$
+On choisit $n_I$ pour viser un taux de sondage **final** de 2 %.
+
+```{r q8-grappes-dep}
+# Totaux par département (UP)
+dep_tot <- tableR %>%
+  group_by(Code.departement) %>%
+  summarise(ti = sum(Valeur.fonciere),
+            taille = n(), .groups = "drop")
+
+NI_dep <- nrow(dep_tot)
+
+# nI choisi pour ~2 % de locaux au total :
+taille_moy_dep <- mean(dep_tot$taille)
+nI_dep <- max(2, round(taux_final * N / taille_moy_dep))
+nI_dep <- min(nI_dep, NI_dep)
+fI_dep <- nI_dep / NI_dep
+
+set.seed(ma_graine)
+sI <- srswor(nI_dep, NI_dep)
+ech_dep <- dep_tot[sI == 1, ]
+
+ty_grD  <- NI_dep * mean(ech_dep$ti)
+var_grD <- NI_dep^2 * (1 - fI_dep) / nI_dep * var(ech_dep$ti)
+cv_grD  <- cv(ty_grD, var_grD)
+
+c(nI = nI_dep, NI = NI_dep, total = ty_grD,
+  variance = var_grD, cv = cv_grD)
+```
+
+> **Commentaire.** 
+
+> La mise en œuvre de ce plan à taux de sondage de 2 % a mené au tirage de
+> seulement $n_I = 2$ départements sur les $N_I = 81$ disponibles. Ce trop
+> faible nombre d'unités primaires engendre une instabilité critique de
+> l'estimateur, qui s'effondre ici à 8 629 416 478 euros
+> (soit une sous-estimation aberrante de près de 90 %). Le CV de 12,01 % 
+> confirme le risque majeur de ce plan : les départements français étant très 
+> hétérogènes en taille et en valeur immobilière totale, l'omission des 
+> départements moteurs (comme l'Île-de-France ou les grandes métropoles) détruit
+>la fiabilité de l'extrapolation. 
+
+## Q9 --- Plan en grappes de communes
+
+Même principe, mais UP = **communes**. Il y en a beaucoup plus, de tailles
+plus petites : on tire davantage d'UP, ce qui stabilise l'estimateur.
+
+```{r q9-grappes-com}
+# Identifiant commune unique (département + code commune)
+tableR$id_com <- paste(tableR$Code.departement,
+                       tableR$Code.commune, sep = "_")
+
+com_tot <- tableR %>%
+  group_by(id_com) %>%
+  summarise(ti = sum(Valeur.fonciere),
+            taille = n(), .groups = "drop")
+
+NI_com <- nrow(com_tot)
+taille_moy_com <- mean(com_tot$taille)
+nI_com <- max(2, round(taux_final * N / taille_moy_com))
+nI_com <- min(nI_com, NI_com)
+fI_com <- nI_com / NI_com
+
+set.seed(ma_graine)
+sI_c <- srswor(nI_com, NI_com)
+ech_com <- com_tot[sI_c == 1, ]
+
+ty_grC  <- NI_com * mean(ech_com$ti)
+var_grC <- NI_com^2 * (1 - fI_com) / nI_com * var(ech_com$ti)
+cv_grC  <- cv(ty_grC, var_grC)
+
+c(nI = nI_com, NI = NI_com, total = ty_grC,
+  variance = var_grC, cv = cv_grC)
+```
+
+> **Commentaire.** 
+> En passant à l'échelle des communes, le plan s'appuie sur le tirage de 
+> $n_I = 444$ grappes sur $N_I = 22183$. L'estimation globale remonte à 
+> 74 386 019 982 euros, se rapprochant nettement du total réel. Néanmoins, sa 
+> variance explose à $4,61 \times 10^{20}$ et son CV atteint un niveau critique 
+> de 28,88 %. Ce résultat illustre parfaitement l'effet de corrélation 
+> intra-grappe ($\delta$) : les transactions au sein d'une même commune étant 
+> extrêmement similaires en termes de prix au mètre carré, l'information 
+> collectée y est fortement redondante, ce qui détériore l'efficacité 
+> statistique globale à taille d'échantillon égale.
+
+## Q10 --- Plan à deux degrés (~75 % des départements représentés)
+
+Pour qu'environ **75 % des départements** apparaissent dans l'échantillon
+final, on tire au **premier degré** $n_I \approx 0{,}75\,N_I$ départements
+par plan SI, puis au **second degré** un plan SI de locaux dans chaque
+département retenu (plan SI,SI, chap. 8 §8.3).
+
+Probabilité d'inclusion composée (chap. 8) :
+$\pi_k=\pi_{Ii}\,\pi_{k\mid i}$. L'estimateur H-T (illustration SI,SI) :
+$$
+\hat t_\pi=\frac{N_I}{n_I}\sum_{i\in s_I}\frac{N_i}{n_i}\sum_{k\in s_i} y_k
+         =\frac{N_I}{n_I}\sum_{i\in s_I} N_i\,\bar y_{s_i},
+$$
+de variance (décomposition ANOVA, chap. 8, plan SI,SI) :
+$$
+\operatorname{var}_{SI,SI}(\hat t_\pi)
+= \frac{N_I}{n_I}\sum_{U_I} N_i^2\Big(\tfrac{1}{n_i}-\tfrac{1}{N_i}\Big)S^2_{yU_i}
+ + N_I^2\Big(\tfrac{1}{n_I}-\tfrac{1}{N_I}\Big)S^2_{tU_I}.
+$$
+On choisit $n_i$ par département pour atteindre globalement un taux final
+de 2 %.
+
+```{r q10-deux-degres}
+# Premier degré : 75 % des départements
+NI <- NI_dep
+nI <- round(0.75 * NI)
+fI <- nI / NI
+
+set.seed(ma_graine)
+sel_dep <- srswor(nI, NI)
+deps_sel <- dep_tot$Code.departement[sel_dep == 1]
+
+# Second degré : plan SI dans chaque département retenu.
+# Taux de second degré f2 calé pour un taux final global de 2 % :
+# f_final = fI * f2  =>  f2 = taux_final / fI
+f2 <- min(1, taux_final / fI)
+
+# Tirage des locaux par département sélectionné
+liste_ech <- list()
+infos2 <- list()
+set.seed(ma_graine)
+for (d in deps_sel) {
+  Ud <- tableR[tableR$Code.departement == d, ]
+  Ni <- nrow(Ud)
+  ni <- max(1, round(f2 * Ni))
+  ni <- min(ni, Ni)
+  s2_idx <- srswor(ni, Ni)
+  ech_d <- Ud[s2_idx == 1, ]
+  liste_ech[[as.character(d)]] <- ech_d
+  infos2[[as.character(d)]] <- data.frame(
+    dep = d, Ni = Ni, ni = ni,
+    ybar = mean(ech_d$Valeur.fonciere),
+    s2 = ifelse(ni > 1, var(ech_d$Valeur.fonciere), 0),
+    that_i = Ni * mean(ech_d$Valeur.fonciere)
+  )
+}
+infos2 <- do.call(rbind, infos2)
+
+# Estimateur HT (SI,SI)
+ty_2d <- (NI / nI) * sum(infos2$that_i)
+
+# Variance (SI,SI) : variance des US + variance des UP
+var_US <- (NI / nI) * sum(infos2$Ni^2 * (1/infos2$ni - 1/infos2$Ni) * infos2$s2)
+S2_t  <- var(infos2$that_i)                       # estime S^2_{tU_I}
+var_UP <- NI^2 * (1/nI - 1/NI) * S2_t
+var_2d <- var_US + var_UP
+cv_2d  <- cv(ty_2d, var_2d)
+
+c(nI = nI, NI = NI, part_dep = nI/NI,
+  total = ty_2d, variance = var_2d, cv = cv_2d)
+```
+
+> **Commentaire.**
+
+> Le plan à deux degrés (tirage de 75 % des départements au premier degré, 
+> soit $n_I = 61$ , puis sous-échantillonnage SI à l'intérieur ) fournit une
+> estimation de 87 269 778 383 euros. Avec un CV de 8,15 % , il surpasse
+> largement les deux plans en grappes précédents. En dispersant le premier degré
+> sur les trois quarts du territoire national, ce plan réduit drastiquement la 
+> composante de la « variance inter-UP » (départements), tout en corrigeant la 
+> redondance d'information au second degré grâce au sous-échantillonnage local. 
+
+
+\newpage
+
+# Estimateur par le ratio
+
+## Q11 --- Choix et lien de la variable auxiliaire $X$
+
+On retient **$X$ = surface bâtie** (`Surface.reelle.bati`), connue pour
+tout local et reliée à la valeur foncière (un bien plus grand vaut en
+général plus cher). On décrit le lien.
+
+```{r q11-aux}
+aux <- tableR %>%
+  filter(!is.na(Surface.reelle.bati), !is.na(Valeur.fonciere))
+
+r_yx <- cor(aux$Valeur.fonciere, aux$Surface.reelle.bati)
+r_yx
+
+# Coefficients de variation (pour le critère d'efficacité du ratio)
+cv_y <- sd(aux$Valeur.fonciere) / mean(aux$Valeur.fonciere)
+cv_x <- sd(aux$Surface.reelle.bati) / mean(aux$Surface.reelle.bati)
+c(cor = r_yx, cv_y = cv_y, cv_x = cv_x)
+```
+
+> **Commentaire.** 
+> L'introduction de la surface bâtie comme variable auxiliaire donne des 
+> résultats contrastés. Pour le plan SI, l'estimateur par le ratio affiche un 
+> total de 73 630 531 006 euros et un CV de 6,72 %. Contre toute attente, ce 
+> résultat est moins précis que l'estimateur de Horvitz-Thompson classique 
+> (CV de 3,40 %). Ce phénomène s'explique par la valeur très faible du 
+> coefficient de corrélation linéaire dans nos données ($\rho \approx 0,06$). 
+> Le critère d'efficacité du ratio ($\rho \ge \frac{1}{2} \frac{CV(X)}{CV(Y)}$) 
+> n'est pas respecté ici, car la variabilité relative de la surface 
+> ($CV_X \approx 3,33$) dépasse celle de la valeur foncière 
+> ($CV_Y \approx 2,44$). Le ratio s'avère en revanche bénéfique pour stabiliser 
+> le plan en grappes de communes, abaissant son CV de 28,88 % à 25,76 %.
+
+
+## Q12 --- Estimation par ratio : plan SI et plans en grappes
+
+**Plan SI.** L'estimateur par ratio du total (chap. 7 §7.2.1) est
+$$
+\hat t_{y,\mathrm{ra}}=\hat R\,t_x,\qquad \hat R=\frac{\bar y_s}{\bar x_s},
+$$
+où $t_x=\sum_U x_k$ est le total connu de la variable auxiliaire. Sa
+variance approchée et son estimateur (chap. 7, formules (7.1) et (7.2)) :
+$$
+\operatorname{var}(\hat t_{y,\mathrm{ra}})\simeq
+N^2\Big(\tfrac1n-\tfrac1N\Big)S^2_{y-Rx,U},
+\qquad
+\widehat{\operatorname{var}}(\hat t_{y,\mathrm{ra}})=
+N^2\,\frac{\bar x_U^2}{\bar x_s^2}\Big(\tfrac1n-\tfrac1N\Big)S^2_{y-\hat R x,s},
+$$
+avec $S^2_{y-\hat R x,s}=\frac1{n-1}\sum_s (y_k-\hat R x_k)^2$ (résidus).
+
+```{r q12-ratio-si}
+tx_pop <- sum(tableR$Surface.reelle.bati, na.rm = TRUE)
+xbar_U <- mean(tableR$Surface.reelle.bati, na.rm = TRUE)
+
+
+ech_SI2 <- ech_SI %>%
+  filter(!is.na(Surface.reelle.bati), !is.na(Valeur.fonciere))
+n_r <- nrow(ech_SI2)
+
+R_hat   <- mean(ech_SI2$Valeur.fonciere) / mean(ech_SI2$Surface.reelle.bati)
+ty_raSI <- R_hat * tx_pop
+
+resid   <- ech_SI2$Valeur.fonciere - R_hat * ech_SI2$Surface.reelle.bati
+S2_res  <- var(resid)
+xbar_s  <- mean(ech_SI2$Surface.reelle.bati)
+
+var_raSI <- N^2 * (xbar_U^2 / xbar_s^2) * (1/n_r - 1/N) * S2_res
+cv_raSI  <- cv(ty_raSI, var_raSI)
+
+c(R = R_hat, total = ty_raSI, variance = var_raSI, cv = cv_raSI)
+```
+
+**Plans en grappes.** On passe au
+niveau des UP : on remplace $y_k$ par le total $t_i$ de l'UP, $x_k$ par le
+total auxiliaire $t_{x_i}$ de l'UP, et $(n,N)$ par $(n_I,N_I)$. L'estimateur
+par ratio devient
+$$
+\hat t_{y,\mathrm{ra}}=\hat R\,t_x,\qquad
+\hat R=\frac{\sum_{i\in s_I} t_i}{\sum_{i\in s_I} t_{x_i}},
+$$
+avec la variance estimée (transposition de (7.2) au niveau grappe)
+$$
+\widehat{\operatorname{var}}=N_I^2\,\frac{\bar t_{x,U_I}^2}{\bar t_{x,s_I}^2}
+\Big(\tfrac{1}{n_I}-\tfrac{1}{N_I}\Big)
+\frac{1}{n_I-1}\sum_{i\in s_I}\big(t_i-\hat R\,t_{x_i}\big)^2 .
+$$
+
+```{r q12-ratio-grappes}
+
+dep_aux <- tableR %>%
+  group_by(Code.departement) %>%
+  summarise(ti  = sum(Valeur.fonciere),
+            txi = sum(Surface.reelle.bati, na.rm = TRUE),
+            .groups = "drop")
+tx_dep_pop <- sum(dep_aux$txi)
+
+ech_depA <- dep_aux[sI == 1, ]
+R_grD    <- sum(ech_depA$ti) / sum(ech_depA$txi)
+ty_ra_grD <- R_grD * tx_dep_pop
+
+res_grD  <- ech_depA$ti - R_grD * ech_depA$txi
+txbar_U  <- mean(dep_aux$txi); txbar_s <- mean(ech_depA$txi)
+var_ra_grD <- NI_dep^2 * (txbar_U^2/txbar_s^2) *
+              (1/nI_dep - 1/NI_dep) * var(res_grD)
+cv_ra_grD <- cv(ty_ra_grD, var_ra_grD)
+
+# --- Ratio, grappes de commune ---
+com_aux <- tableR %>%
+  group_by(id_com) %>%
+  summarise(ti  = sum(Valeur.fonciere),
+            txi = sum(Surface.reelle.bati, na.rm = TRUE),
+            .groups = "drop")
+tx_com_pop <- sum(com_aux$txi)
+
+ech_comA <- com_aux[sI_c == 1, ]
+R_grC    <- sum(ech_comA$ti) / sum(ech_comA$txi)
+ty_ra_grC <- R_grC * tx_com_pop
+
+res_grC  <- ech_comA$ti - R_grC * ech_comA$txi
+txbar_Uc <- mean(com_aux$txi); txbar_sc <- mean(ech_comA$txi)
+var_ra_grC <- NI_com^2 * (txbar_Uc^2/txbar_sc^2) *
+              (1/nI_com - 1/NI_com) * var(res_grC)
+cv_ra_grC <- cv(ty_ra_grC, var_ra_grC)
+
+data.frame(
+  Plan = c("Ratio SI", "Ratio grappes dép.", "Ratio grappes com."),
+  Total = c(ty_raSI, ty_ra_grD, ty_ra_grC),
+  Variance = c(var_raSI, var_ra_grD, var_ra_grC),
+  CV = c(cv_raSI, cv_ra_grD, cv_ra_grC)
+) %>%
+  kable(caption = "Estimation par ratio (3 plans)",
+        booktabs = TRUE, digits = c(0,0,0,4))
+```
+
+> **Commentaire.** 
+> L'analyse de performance basée sur 500 répétitions valide empiriquement les
+> propriétés asymptotiques de nos stratégies et permet de les classer 
+> définitivement par Erreur Quadratique Moyenne (EQM) croissante:  1. STSI 
+> (Neyman) s'impose comme la stratégie optimale absolue 
+> ($EQM = 4,15 \times 10^{18}$ ; $CV_{emp} = 2,48\ \%$). Son biais est minimal, 
+> et sa variance est divisée par deux par rapport au plan de référence.
+> 2. Le plan SI se classe deuxième ($EQM = 8,23 \times 10^{18}$), confirmant sa 
+> robustesse fondamentale.
+> 3. L'estimateur par Ratio SI se positionne en troisième place 
+> ($EQM = 2,00 \times 10^{19}$) ; son efficacité est bridée par la faible
+> corrélation globale de la surface sur l'ensemble de la population.
+> 4. Le plan à Deux Degrés offre un compromis honorable 
+> ($EQM = 5,01 \times 10^{19}$ ; $CV_{emp} = 8,63\ \%$).
+> 5. Les plans en grappes (Communes et Départements) ferment la marche avec des 
+> EQM excessivement pénalisantes (dépassant $10^{21}$).  Conformément à la 
+> théorie, le biais relatif moyen reste proche de 0 % pour l'ensemble des 
+> estimateurs. Le léger biais observé pour l'estimateur par ratio est tout à 
+> fait normal puisqu'il s'agit d'un estimateur non linéaire, sans biais 
+> uniquement au premier ordre (asymptotique).  
+
+\newpage
+
+# Simulations (Q13 et Q14)
+
+## Q13 --- Comparaison des 8 estimateurs sur 500 répétitions
+
+On répète **500 fois** chaque stratégie (en faisant varier le tirage) et
+on calcule, pour chaque estimateur $\hat t$, des indicateurs empiriques :
+
+- la **moyenne empirique** $\bar{\hat t}=\frac1B\sum_b \hat t^{(b)}$ et le
+  **biais empirique** $\bar{\hat t}-t_y$ ;
+- la **variance empirique** des estimations ;
+- l'**erreur quadratique moyenne** $\mathrm{EQM}=\text{biais}^2+\text{var}$
+  (chap. 6, notion d'erreur quadratique) ;
+- le **CV empirique** $\sqrt{\mathrm{var}}/\bar{\hat t}$.
+
+L'EQM est l'indicateur de synthèse : il combine biais et variance et
+permet de **classer** les stratégies.
+
+```{r q13-simulations, cache=TRUE}
+B <- 500
+ty_vrai <- ty_pop
+
+# Pré-calculs population pour le ratio
+tx_pop_glob <- sum(tableR$Surface.reelle.bati, na.rm = TRUE)
+
+simu <- replicate(B, {
+
+  ## --- SI ---
+  s  <- srswor(n_final, N)
+  e  <- tableR[s == 1, ]
+  ySi <- e$Valeur.fonciere
+  t_SI <- N * mean(ySi)
+
+  ## --- STSI (Neyman, mêmes nh qu'en Q4) ---
+  tt <- tableR[order(tableR$strate), ]
+  stt <- sampling::strata(tt, "strate", size = nh_vec, method = "srswor")
+  eST <- getdata(tt, stt)
+  rST <- eST %>% group_by(strate) %>%
+    summarise(nh = n(), yb = mean(Valeur.fonciere), .groups="drop") %>%
+    left_join(info_str %>% select(strate, Nh), by="strate")
+  t_ST <- sum(rST$Nh * rST$yb)
+
+  ## --- Grappes département ---
+  si <- srswor(nI_dep, NI_dep)
+  t_grD <- NI_dep * mean(dep_tot$ti[si == 1])
+
+  ## --- Grappes commune ---
+  sic <- srswor(nI_com, NI_com)
+  t_grC <- NI_com * mean(com_tot$ti[sic == 1])
+
+  ## --- Deux degrés (75 % dép.) ---
+  sd_ <- srswor(nI, NI_dep)
+  deps <- dep_tot$Code.departement[sd_ == 1]
+  acc <- 0
+  for (d in deps) {
+    Ud <- tableR[tableR$Code.departement == d, ]
+    Ni <- nrow(Ud); ni <- min(Ni, max(1, round(f2 * Ni)))
+    ed <- Ud[srswor(ni, Ni) == 1, ]
+    acc <- acc + Ni * mean(ed$Valeur.fonciere)
+  }
+  t_2d <- (NI_dep / nI) * acc
+
+  ## --- Ratio SI ---
+  ei <- e %>% filter(!is.na(Surface.reelle.bati))
+  R <- mean(ei$Valeur.fonciere) / mean(ei$Surface.reelle.bati)
+  t_raSI <- R * tx_pop_glob
+
+  ## --- Ratio grappes département ---
+  edA <- dep_aux[si == 1, ]
+  RgD <- sum(edA$ti) / sum(edA$txi)
+  t_ra_grD <- RgD * tx_dep_pop
+
+  ## --- Ratio grappes commune ---
+  ecA <- com_aux[sic == 1, ]
+  RgC <- sum(ecA$ti) / sum(ecA$txi)
+  t_ra_grC <- RgC * tx_com_pop
+
+  c(SI = t_SI, STSI = t_ST,
+    GrappeDep = t_grD, GrappeCom = t_grC, DeuxDegres = t_2d,
+    RatioSI = t_raSI, RatioGrDep = t_ra_grD, RatioGrCom = t_ra_grC)
+})
+
+simu <- t(simu)  # B lignes x 8 colonnes
+```
+
+```{r q13-tableau}
+indic <- data.frame(
+  Estimateur = colnames(simu),
+  Moyenne   = apply(simu, 2, mean),
+  Biais     = apply(simu, 2, mean) - ty_vrai,
+  Variance  = apply(simu, 2, var),
+  row.names = NULL
+)
+indic$EQM <- indic$Biais^2 + indic$Variance
+indic$CV_emp <- sqrt(indic$Variance) / indic$Moyenne
+indic$Biais_rel <- indic$Biais / ty_vrai
+
+indic <- indic[order(indic$EQM), ]   # classement par EQM croissante
+
+kable(indic,
+      caption = "Comparaison des 8 estimateurs sur 500 simulations (rangés par EQM)",
+      booktabs = TRUE,
+      digits = c(0, 0, 0, 0, 0, 4, 4)) %>%
+  kableExtra::kable_styling(latex_options = c("scale_down"))
+```
+
+```{r q13-boxplot, fig.cap="Distribution des 500 estimations par stratégie (ligne = total vrai).", fig.width=7, fig.height=4}
+simu_long <- as.data.frame(simu) %>%
+  tidyr::pivot_longer(everything(),
+                      names_to = "Estimateur", values_to = "Estimation")
+
+ggplot(simu_long, aes(x = reorder(Estimateur, Estimation, FUN = median),
+                      y = Estimation)) +
+  geom_boxplot(fill = "grey80", outlier.alpha = 0.3) +
+  geom_hline(yintercept = ty_vrai, colour = "red", linetype = "dashed") +
+  coord_flip() +
+  labs(x = NULL, y = "Estimation du total") +
+  theme_minimal(base_size = 11)
+```
+
+
+
+## Q14 --- Quel autre plan aurait-on pu proposer ?
+
+On aurait pu envisager :
+
+- un **plan à probabilités inégales proportionnelles à la taille** (chap. 3
+  §3.1, commentaire (3), et chap. 4 tirage proportionnel à la taille) : en
+  prenant $\pi_k \propto x_k$ avec $x_k$ la surface, les valeurs dilatées
+  $\check y_k=y_k/\pi_k$ deviennent quasi constantes et la variance chute ;
+- un **plan stratifié avec estimation par ratio dans chaque strate**
+  (estimateur par ratio post-stratifié, chap. 7 §7.5.3), combinant les deux
+  sources de gain ;
+- un **plan à deux degrés à probabilités proportionnelles à la taille des
+  UP**, pour corriger la forte hétérogénéité de taille des départements
+  observée en Q8.
+
+
+
+
+\newpage
+
+# Annexe A --- Notes de lecture 
+
+- Total, moyenne, but du sondage : **chapitre 1**.
+- Plan SI, $\pi_k=n/N$, variances (2.1)--(2.4), CV (2.18)--(2.20),
+  intervalle de confiance (2.22) : **chapitre 2**.
+- Estimateur de Horvitz--Thompson (3.5), effet de plan §3.3 :
+  **chapitre 3**.
+- Tirage proportionnel à la taille : **chapitre 4**.
+- Plan stratifié STSI (5.1)--(5.3), affectation de Neyman (5.7),
+  proportionnelle (5.9) : **chapitre 5**.
+- Estimation d'un ratio, linéarisation, domaine : **chapitre 6**.
+- Estimation par ratio (7.1)--(7.2) et efficacité §7.2.3,
+  ratio post-stratifié §7.5.3 : **chapitre 7**.
+- Plans en grappes / à deux degrés, plan SIC (8.4), plan SI,SI :
+  **chapitre 8**.
+
+\newpage
+
+# Annexe B --- Code R complet
+
+Le code ci-dessous est l'intégralité des programmes utilisés, présenté dans
+l'ordre du rapport. Il est **affiché sans être ré-exécuté** (`eval=FALSE`).
+
+```{r annexe-code, ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
